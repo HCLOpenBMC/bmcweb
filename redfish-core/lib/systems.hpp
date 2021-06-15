@@ -2096,11 +2096,11 @@ inline void requestRoutesSystemActionsReset(App& app)
                                                  resetType);
                 return;
             }
+            std::string computerSystemIndex = collection_util::getComputerSystemIndex(ComputerSystemSubtree);
+            std::string hostDbusServiceName = getHostServiceName(computerSystemIndex);
 
             if (hostCommand)
             {
-                std::string computerSystemIndex = collection_util::getComputerSystemIndex(ComputerSystemSubtree);
-                 std::string hostDbusServiceName = getHostServiceName(computerSystemIndex);
 
                 crow::connections::systemBus->async_method_call(
                     [asyncResp, resetType](const boost::system::error_code ec) {
@@ -2148,8 +2148,8 @@ inline void requestRoutesSystemActionsReset(App& app)
                         }
                         messages::success(asyncResp->res);
                     },
-                    "xyz.openbmc_project.State.Chassis",
-                    "/xyz/openbmc_project/state/chassis0",
+                    ("xyz.openbmc_project.State.Chassis" + computerSystemIndex).c_str(),
+                    ("/xyz/openbmc_project/state/chassis"+ computerSystemIndex).c_str(),
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.State.Chassis",
                     "RequestedPowerTransition",

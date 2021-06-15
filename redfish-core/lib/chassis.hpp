@@ -34,8 +34,13 @@ namespace redfish
  *
  * @return None.
  */
-inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> aResp)
+inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> aResp,std::string chassisId)
 {
+    std::string chassisIndex = collection_util::getChassisSystemIndex(chassisId);
+    if(chassisIndex.empty())
+    {
+        chassisIndex = "0";
+    }
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
@@ -65,8 +70,8 @@ inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> aResp)
                 }
             }
         },
-        "xyz.openbmc_project.State.Chassis",
-        "/xyz/openbmc_project/state/chassis0",
+        ("xyz.openbmc_project.State.Chassis"+ chassisIndex).c_str(),
+        ("/xyz/openbmc_project/state/chassis"+ chassisIndex).c_str(),
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.State.Chassis", "CurrentPowerState");
 }
@@ -384,7 +389,7 @@ inline void requestRoutesChassis(App& app)
                                 asyncResp->res.jsonValue["Links"]["ManagedBy"] =
                                     {{{"@odata.id",
                                        "/redfish/v1/Managers/bmc"}}};
-                                getChassisState(asyncResp);
+                                getChassisState(asyncResp,chassisId);
                             },
                             connectionName, path,
                             "org.freedesktop.DBus.Properties", "GetAll",
@@ -535,7 +540,7 @@ inline void requestRoutesChassis(App& app)
 }
 
 inline void
-    doChassisPowerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp)
+    doChassisPowerCycle(const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,std::string chassisId)
 {
     const char* busName = "xyz.openbmc_project.ObjectMapper";
     const char* path = "/xyz/openbmc_project/object_mapper";
@@ -547,7 +552,7 @@ inline void
 
     // Use mapper to get subtree paths.
     crow::connections::systemBus->async_method_call(
-        [asyncResp](const boost::system::error_code ec,
+        [asyncResp,chassisId](const boost::system::error_code ec,
                     const std::vector<std::string>& chassisList) {
             if (ec)
             {
@@ -555,8 +560,29 @@ inline void
                 messages::internalError(asyncResp->res);
                 return;
             }
+            std::string chassisIndex;
+            std::string multihostChassisobject =
+                "/xyz/openbmc_project/state/chassis_system1";
 
-            const char* processName = "xyz.openbmc_project.State.Chassis";
+            //multihost has  dbusobjects chassis_system1 and above          
+            if ((std::find(chassisList.begin(), chassisList.end(),
+                           multihostChassisobject)) == chassisList.end())
+            {
+                //in case of baseboard dbus object then select any one of host dbus object as all the host dbus objects have chassis_system0 interface which does sled cycle. 
+                if( collection_util::isBaseboardChassisId(chassisId) == true )
+                {  
+                    chassisIndex = "1";
+                }
+                else
+                {
+                    chassisIndex = collection_util::getChassisSystemIndex(chassisId);
+                }
+            }
+            else
+            {
+                chassisIndex = "0";
+            }
+            const char* processName = ("xyz.openbmc_project.State.Chassis" + chassisIndex).c_str();
             const char* interfaceName = "xyz.openbmc_project.State.Chassis";
             const char* destProperty = "RequestedPowerTransition";
             const std::string propertyValue =
@@ -608,7 +634,7 @@ inline void requestRoutesChassisResetAction(App& app)
         .methods(boost::beast::http::verb::post)(
             [](const crow::Request& req,
                const std::shared_ptr<bmcweb::AsyncResp>& asyncResp,
-               const std::string&) {
+               const std::string& chassisId) {
                 BMCWEB_LOG_DEBUG << "Post Chassis Reset.";
 
                 std::string resetType;
@@ -628,7 +654,7 @@ inline void requestRoutesChassisResetAction(App& app)
 
                     return;
                 }
-                doChassisPowerCycle(asyncResp);
+                doChassisPowerCycle(asyncResp,chassisId);
             });
 }
 

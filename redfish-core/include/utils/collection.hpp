@@ -67,7 +67,25 @@ inline std::string
     getComputerSystemIndex(std::string redfishSubTree){
     redfishSubTree.erase(remove( redfishSubTree.begin(), redfishSubTree.end(), '\"' ),redfishSubTree.end());
     return redfishSubTree.substr( redfishSubTree.find("host") + (redfishSubTree.length() - 1) );
+    
 }
+inline std::string
+    getChassisSystemIndex(std::string redfishSubTree){
+    redfishSubTree.erase(remove( redfishSubTree.begin(), redfishSubTree.end(), '\"' ),redfishSubTree.end());
+    return redfishSubTree.substr( redfishSubTree.find("Twin_Lake_") + (redfishSubTree.length() - 1) );
+    }
+inline bool 
+    isBaseboardChassisId(std::string chassisId){
+        
+        if( chassisId.find("Baseboard") != std::string::npos )
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
 
+    }
 } // namespace collection_util
 } // namespace redfish
