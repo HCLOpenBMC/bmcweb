@@ -62,6 +62,11 @@ inline void
         "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths", subtree, 0,
         interfaces);
 }
+inline std::string
+    getComputerSystemIndex(std::string redfishSubTree){
+    return redfishSubTree.substr( redfishSubTree.find("system") + 1 );
+}
+
 
 } // namespace collection_util
 } // namespace redfish
