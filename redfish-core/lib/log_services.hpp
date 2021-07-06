@@ -3043,7 +3043,7 @@ static void
                 BMCWEB_LOG_DEBUG << "Post code boot index failed.";
             }
         },
-        "xyz.openbmc_project.State.Boot.PostCode1",
+        dbusService,
         "/xyz/openbmc_project/State/Boot/PostCode0",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.State.Boot.PostCode", "CurrentBootCycleCount");
@@ -3068,8 +3068,6 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
                 asyncResp->res.jsonValue["Members"] = nlohmann::json::array();
                 asyncResp->res.jsonValue["Members@odata.count"] = 0;
 
-		std::cerr<<" Postcode/Entries \n";
-
                 uint64_t skip = 0;
                 uint64_t top = maxEntriesPerPage; // Show max entries by default
                 if (!getSkipParam(asyncResp, req, skip))
@@ -3093,7 +3091,6 @@ inline void requestRoutesPostCodesEntryCollection(App& app)
                 }
                 
 		BMCWEB_LOG_ERROR <<"computerSystemIdx :" <<computerSystemIdx;
-                std::cerr <<"computerSystemIdx :" <<computerSystemIdx;
 
                 getCurrentBootNumber(asyncResp, skip, top, computerSystemIdx);
             });
@@ -3120,8 +3117,6 @@ inline void requestRoutesPostCodesEntry(App& app)
                 uint16_t bootIndex = 0;
                 uint64_t codeIndex = 0;
                 size_t dashPos = bootIndexStr.find('-');
-
-		std::cerr<<" Postcode/Entries <str>\n";
 
                 if (dashPos == std::string::npos)
                 {
@@ -3163,7 +3158,6 @@ inline void requestRoutesPostCodesEntry(App& app)
                 }
 
                 BMCWEB_LOG_ERROR <<"computerSystemIdx :" <<computerSystemIdx;
-                std::cerr <<"computerSystemIdx :" <<computerSystemIdx;
                
                 getPostCodeForEntry(asyncResp, bootIndex, codeIndex, computerSystemIdx);
             });
