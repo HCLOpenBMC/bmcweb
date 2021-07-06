@@ -24,7 +24,7 @@
 #include <boost/container/flat_map.hpp>
 #include <utils/fw_utils.hpp>
 #include <utils/json_utils.hpp>
-
+#include <iostream>
 #include <variant>
 
 namespace redfish
@@ -924,11 +924,13 @@ inline void getBootProgress(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 inline void getBootMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                         const std::string& bootDbusObj)
 {
+    std::cerr << " In get boot mode \n";
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
                 const std::variant<std::string>& bootMode) {
             if (ec)
             {
+                std::cerr << " In get boot mode 1 \n";
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 messages::internalError(aResp->res);
                 return;
@@ -936,9 +938,10 @@ inline void getBootMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
             const std::string* bootModeStr =
                 std::get_if<std::string>(&bootMode);
-
+            std::cerr << " Boot mode str : " << *bootModeStr << "\n";
             if (!bootModeStr)
             {
+                std::cerr << " In get boot mode 2 \n";
                 messages::internalError(aResp->res);
                 return;
             }
@@ -988,6 +991,7 @@ inline void getBootMode(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 inline void getBootSource(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                           bool oneTimeEnabled)
 {
+    std::cerr << " In get boot source \n";
     std::string computerSystemSubtree = aResp->res.jsonValue["Name"].dump();
     std::string computerSystemIndex = collection_util::getComputerSystemIndex(computerSystemSubtree);
 
@@ -1004,6 +1008,7 @@ inline void getBootSource(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
                              const std::variant<std::string>& bootSource) {
             if (ec)
             {
+                std::cerr << " In get boot src 1 \n";
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 messages::internalError(aResp->res);
                 return;
@@ -1011,9 +1016,10 @@ inline void getBootSource(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
 
             const std::string* bootSourceStr =
                 std::get_if<std::string>(&bootSource);
-
+            std::cerr << " Boot src str : " << *bootSourceStr << " \n";
             if (!bootSourceStr)
             {
+                std::cerr << " In get boot src 2 \n";
                 messages::internalError(aResp->res);
                 return;
             }
@@ -1042,32 +1048,36 @@ inline void getBootSource(const std::shared_ptr<bmcweb::AsyncResp>& aResp,
  */
 inline void getBootProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
 {
+    std::cerr << " In get boot prop \n";
     BMCWEB_LOG_DEBUG << "Get boot information.";
 
     std::string computerSystemSubtree = aResp->res.jsonValue["Name"].dump();
     std::string computerSystemIndex = collection_util::getComputerSystemIndex(computerSystemSubtree);
+    std::cerr << "Computer system index : " << computerSystemIndex << "\n";
 
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec,
                 const std::variant<bool>& oneTime) {
             if (ec)
             {
+                std::cerr << " Error \n";
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 // not an error, don't have to have the interface
                 return;
             }
 
             const bool* oneTimePtr = std::get_if<bool>(&oneTime);
-
-            if (!oneTimePtr)
+            std::cerr << " One time : "<< *oneTimePtr << "\n";
+/*            if (oneTimePtr)
             {
+                std::cerr << " Internal error \n";
                 messages::internalError(aResp->res);
                 return;
-            }
+            }*/
             getBootSource(aResp, *oneTimePtr);
         },
         "xyz.openbmc_project.Settings",
-        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time").c_str(),
+        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time"),
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Object.Enable", "Enabled");
 }
@@ -1291,12 +1301,16 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
                                 const std::optional<std::string>& bootSource,
                                 const std::optional<std::string>& bootEnable)
 {
+    std::cerr << "In set boot mode  src \n";
     std::string bootSourceStr =
         "xyz.openbmc_project.Control.Boot.Source.Sources.Default";
     std::string bootModeStr =
         "xyz.openbmc_project.Control.Boot.Mode.Modes.Regular";
     bool oneTimeSetting = oneTimeEnabled;
     bool useBootSource = true;
+
+//    std::cerr << "Boot src : " << bootSource << "\n";
+//    std::cerr << " Boot enable : " << bootEnable << "\n";
 
     // Validate incoming parameters
     if (bootEnable)
@@ -1317,6 +1331,7 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
         }
         else
         {
+            std::cerr << " In else cond \n";
             BMCWEB_LOG_DEBUG << "Unsupported value for "
                                 "BootSourceOverrideEnabled: "
                              << *bootEnable;
@@ -1325,15 +1340,17 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
             return;
         }
     }
-
+    std::cerr << " Afetr boot enable \n";
     if (bootSource && useBootSource)
     {
+        std::cerr << " In use boot src \n";
         // Source target specified
         BMCWEB_LOG_DEBUG << "Boot source: " << *bootSource;
         // Figure out which DBUS interface and property to use
         if (assignBootParameters(aResp, *bootSource, bootSourceStr,
                                  bootModeStr))
         {
+            std::cerr << " In assign boot param \n";
             BMCWEB_LOG_DEBUG
                 << "Invalid property value for BootSourceOverrideTarget: "
                 << *bootSource;
@@ -1342,17 +1359,21 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
             return;
         }
     }
-    
+    std::cerr << " After boot use src \n";
     std::string computerSystemSubtree = aResp->res.jsonValue["Name"].dump();
     std::string computerSystemIndex = collection_util::getComputerSystemIndex(computerSystemSubtree);
+    std::cerr << " comp sys index : " << computerSystemIndex << "\n";
 
     // Act on validated parameters
     BMCWEB_LOG_DEBUG << "DBUS boot source: " << bootSourceStr;
     BMCWEB_LOG_DEBUG << "DBUS boot mode: " << bootModeStr;
-    const char* bootObj =
+/*    const char* bootObj =
         oneTimeSetting ? ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time").c_str()
                        : ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot").c_str();
 
+    std::cerr << " Boot obj path& : " << bootObj << "\n";
+    std::cerr << " Boot obj path  : " << *bootObj << "\n";
+*/
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec) {
             if (ec)
@@ -1361,9 +1382,11 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 messages::internalError(aResp->res);
                 return;
             }
+            std::cerr << " Boot src update \n";
             BMCWEB_LOG_DEBUG << "Boot source update done.";
         },
-        "xyz.openbmc_project.Settings", bootObj,
+        "xyz.openbmc_project.Settings",
+        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot"),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Source", "BootSource",
         std::variant<std::string>(bootSourceStr));
@@ -1376,9 +1399,11 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 messages::internalError(aResp->res);
                 return;
             }
+            std::cerr << "Boot mode done \n";
             BMCWEB_LOG_DEBUG << "Boot mode update done.";
         },
-        "xyz.openbmc_project.Settings", bootObj,
+        "xyz.openbmc_project.Settings",
+        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot"),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
         std::variant<std::string>(bootModeStr));
@@ -1391,10 +1416,11 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
                 messages::internalError(aResp->res);
                 return;
             }
+            std::cerr << " Boot enable done \n";
             BMCWEB_LOG_DEBUG << "Boot enable update done.";
         },
         "xyz.openbmc_project.Settings",
-        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time").c_str(),
+        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time"),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Object.Enable", "Enabled",
         std::variant<bool>(oneTimeSetting));
@@ -1416,9 +1442,12 @@ inline void
                             std::optional<std::string> bootEnable)
 {
     BMCWEB_LOG_DEBUG << "Set boot information.";
-
+    std::cerr << "In set boot src prop \n";
     std::string computerSystemSubtree = aResp->res.jsonValue["Name"].dump();
+    std::cerr << "Comp sub tree : " << computerSystemSubtree << "\n";
+
     std::string computerSystemIndex = collection_util::getComputerSystemIndex(computerSystemSubtree);
+    std::cerr << " Computer sys index : " << computerSystemIndex << "\n";
 
     crow::connections::systemBus->async_method_call(
         [aResp, bootSource{std::move(bootSource)},
@@ -1426,25 +1455,27 @@ inline void
                                             const std::variant<bool>& oneTime) {
             if (ec)
             {
+                std::cerr << " EC : " << ec << "\n";
+                std::cerr << "In set dbus error \n";
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 messages::internalError(aResp->res);
                 return;
             }
 
             const bool* oneTimePtr = std::get_if<bool>(&oneTime);
-
-            if (!oneTimePtr)
+            std::cerr << " Patch one time : " << *oneTimePtr << "\n";
+/*            if (!oneTimePtr)
             {
                 messages::internalError(aResp->res);
                 return;
             }
-
+*/
             BMCWEB_LOG_DEBUG << "Got one time: " << *oneTimePtr;
 
             setBootModeOrSource(aResp, *oneTimePtr, bootSource, bootEnable);
         },
         "xyz.openbmc_project.Settings",
-        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time").c_str(),
+        "/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time",
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.Object.Enable", "Enabled");
 }
@@ -2168,7 +2199,7 @@ inline void requestRoutesSystemActionsReset(App& app)
  */
 inline void requestRoutesSystems(App& app)
 {
-
+    std::cerr << " In request route system \n";
     /**
      * Functions triggers appropriate requests on DBus
      */
@@ -2231,7 +2262,7 @@ inline void requestRoutesSystems(App& app)
                 "xyz.openbmc_project.Inventory.Item.Cpu",
                 "xyz.openbmc_project.Inventory.Item.Drive",
                 "xyz.openbmc_project.Inventory.Item.StorageController"};
-
+            std::cerr << " Befor health pop \n";
             auto health = std::make_shared<HealthPopulate>(asyncResp);
             crow::connections::systemBus->async_method_call(
                 [health](const boost::system::error_code ec,
@@ -2250,7 +2281,7 @@ inline void requestRoutesSystems(App& app)
                 int32_t(0), inventoryForSystems);
 
             health->populate();
-
+            std::cerr << " After health populate \n";
             getMainChassisId(
                 asyncResp, [](const std::string& chassisId,
                               const std::shared_ptr<bmcweb::AsyncResp>& aRsp) {
@@ -2288,7 +2319,9 @@ inline void requestRoutesSystems(App& app)
                 std::optional<std::string> powerRestorePolicy;
 
              BMCWEB_LOG_DEBUG << "redfish_multihost : computer system name" << ComputerSystemName;
-
+             std::cerr << " Inside patch \n";
+             asyncResp->res.jsonValue["Name"] = ComputerSystemName;
+             std::cerr << " Comp sys name  : " << ComputerSystemName << "\n";
                 if (!json_util::readJson(
                         req, asyncResp->res, "IndicatorLED", indicatorLed,
                         "LocationIndicatorActive", locationIndicatorActive,
@@ -2296,6 +2329,7 @@ inline void requestRoutesSystems(App& app)
                         "PowerRestorePolicy", powerRestorePolicy, "AssetTag",
                         assetTag))
                 {
+                    std::cerr << " Inside json if cond \n";
                     return;
                 }
 
@@ -2319,29 +2353,34 @@ inline void requestRoutesSystems(App& app)
                     }
                     setWDTProperties(asyncResp, wdtEnable, wdtTimeOutAction);
                 }
-
+                std::cerr << " Boot props \n";
                 if (bootProps)
                 {
                     std::optional<std::string> bootSource;
                     std::optional<std::string> bootEnable;
                     std::optional<std::string> automaticRetryConfig;
-
+                    std::cerr << "Inside boot props \n";
                     if (!json_util::readJson(
                             *bootProps, asyncResp->res,
                             "BootSourceOverrideTarget", bootSource,
                             "BootSourceOverrideEnabled", bootEnable,
                             "AutomaticRetryConfig", automaticRetryConfig))
                     {
+                        std::cerr << " In boot props cond \n";
                         return;
                     }
+                    std::cerr << "After json \n";
                     if (bootSource || bootEnable)
                     {
+                        std::cerr << "Inside boot src / enable \n";
                         setBootSourceProperties(asyncResp,
                                                 std::move(bootSource),
                                                 std::move(bootEnable));
                     }
+                    std::cerr << " After boot src/enable \n";
                     if (automaticRetryConfig)
                     {
+                        std::cerr << " In automatic retry \n";
                         setAutomaticRetry(asyncResp, *automaticRetryConfig);
                     }
                 }

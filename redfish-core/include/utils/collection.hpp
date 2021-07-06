@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 
 namespace redfish
 {
@@ -64,7 +65,8 @@ inline void
 }
 inline std::string
     getComputerSystemIndex(std::string redfishSubTree){
-    return redfishSubTree.substr( redfishSubTree.find("system") + 1 );
+    redfishSubTree.erase(remove( redfishSubTree.begin(), redfishSubTree.end(), '\"' ),redfishSubTree.end());
+    return redfishSubTree.substr( redfishSubTree.find("host") + (redfishSubTree.length() - 1) );
 }
 
 
