@@ -1054,12 +1054,13 @@ inline void getBootProperties(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             }
 
             const bool* oneTimePtr = std::get_if<bool>(&oneTime);
-
+#if 0
             if (!oneTimePtr)
             {
                 messages::internalError(aResp->res);
                 return;
             }
+#endif
             getBootSource(aResp, *oneTimePtr);
         },
         "xyz.openbmc_project.Settings",
@@ -1345,9 +1346,9 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
     // Act on validated parameters
     BMCWEB_LOG_DEBUG << "DBUS boot source: " << bootSourceStr;
     BMCWEB_LOG_DEBUG << "DBUS boot mode: " << bootModeStr;
-    const char* bootObj =
-        oneTimeSetting ? ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time").c_str()
-                       : ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot").c_str();
+//    const char* bootObj = ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot").c_str();
+//        oneTimeSetting ? ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot/one_time").c_str()
+//                       : ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot").c_str();
 
     crow::connections::systemBus->async_method_call(
         [aResp](const boost::system::error_code ec) {
@@ -1359,7 +1360,8 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
             }
             BMCWEB_LOG_DEBUG << "Boot source update done.";
         },
-        "xyz.openbmc_project.Settings", bootObj,
+        "xyz.openbmc_project.Settings",
+        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot"),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Source", "BootSource",
         std::variant<std::string>(bootSourceStr));
@@ -1374,7 +1376,8 @@ inline void setBootModeOrSource(std::shared_ptr<bmcweb::AsyncResp> aResp,
             }
             BMCWEB_LOG_DEBUG << "Boot mode update done.";
         },
-        "xyz.openbmc_project.Settings", bootObj,
+        "xyz.openbmc_project.Settings",
+        ("/xyz/openbmc_project/control/host" + computerSystemIndex + "/boot"),
         "org.freedesktop.DBus.Properties", "Set",
         "xyz.openbmc_project.Control.Boot.Mode", "BootMode",
         std::variant<std::string>(bootModeStr));
@@ -1428,13 +1431,13 @@ inline void
             }
 
             const bool* oneTimePtr = std::get_if<bool>(&oneTime);
-
+#if 0
             if (!oneTimePtr)
             {
                 messages::internalError(aResp->res);
                 return;
             }
-
+#endif
             BMCWEB_LOG_DEBUG << "Got one time: " << *oneTimePtr;
 
             setBootModeOrSource(aResp, *oneTimePtr, bootSource, bootEnable);
@@ -2286,6 +2289,7 @@ inline void requestRoutesSystems(App& app)
 
              BMCWEB_LOG_DEBUG << "redfish_multihost : computer system name" << ComputerSystemName;
              asyncResp->res.jsonValue["Name"] = ComputerSystemName;
+             std::cerr << " Comp sys name  : " << ComputerSystemName << "\n";
 
                 if (!json_util::readJson(
                         req, asyncResp->res, "IndicatorLED", indicatorLed,
