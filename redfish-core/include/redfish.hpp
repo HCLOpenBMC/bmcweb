@@ -127,11 +127,11 @@ class RedfishService
 #endif
 
         requestRoutesBMCLogServiceCollection(app);
-#ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
+//#ifdef BMCWEB_ENABLE_REDFISH_BMC_JOURNAL
         requestRoutesBMCJournalLogService(app);
         requestRoutesBMCJournalLogEntryCollection(app);
         requestRoutesBMCJournalLogEntry(app);
-#endif
+//#endif
 
 #ifdef BMCWEB_ENABLE_REDFISH_CPU_LOG
         requestRoutesCrashdumpService(app);
