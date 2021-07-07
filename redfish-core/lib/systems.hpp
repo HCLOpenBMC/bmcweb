@@ -2148,7 +2148,7 @@ inline void requestRoutesSystemActionsReset(App& app)
                         }
                         messages::success(asyncResp->res);
                     },
-                    ("xyz.openbmc_project.State.Chassis" + computerSystemIndex).c_str(),
+                    hostDbusServiceName.c_str(),
                     ("/xyz/openbmc_project/state/chassis"+ computerSystemIndex).c_str(),
                     "org.freedesktop.DBus.Properties", "Set",
                     "xyz.openbmc_project.State.Chassis",

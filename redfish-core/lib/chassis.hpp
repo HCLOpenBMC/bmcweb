@@ -37,16 +37,14 @@ namespace redfish
 inline void getChassisState(std::shared_ptr<bmcweb::AsyncResp> aResp,std::string chassisId)
 {
     std::string chassisIndex = collection_util::getChassisSystemIndex(chassisId);
-    if(chassisIndex.empty())
-    {
-        chassisIndex = "0";
-    }
+    std::cerr<<"getChassisState : start, chassis Index : "<<chassisIndex<<"\n";
     crow::connections::systemBus->async_method_call(
         [aResp{std::move(aResp)}](
             const boost::system::error_code ec,
             const std::variant<std::string>& chassisState) {
             if (ec)
             {
+                std::cerr<<"getChassisState : DBUS response error\n";
                 BMCWEB_LOG_DEBUG << "DBUS response error " << ec;
                 messages::internalError(aResp->res);
                 return;
@@ -550,45 +548,58 @@ inline void
     const std::array<const char*, 1> interfaces = {
         "xyz.openbmc_project.State.Chassis"};
 
+                std::cerr<<"doChassisPowerCycle : start chassis id :"<<chassisId<<"\n";
     // Use mapper to get subtree paths.
     crow::connections::systemBus->async_method_call(
         [asyncResp,chassisId](const boost::system::error_code ec,
                     const std::vector<std::string>& chassisList) {
             if (ec)
             {
+                std::cerr<<"doChassisPowerCycle sled sycle dbuscall error\n";
                 BMCWEB_LOG_DEBUG << "[mapper] Bad D-Bus request error: " << ec;
                 messages::internalError(asyncResp->res);
                 return;
             }
             std::string chassisIndex;
+            std::string slotIndex;
             std::string multihostChassisobject =
                 "/xyz/openbmc_project/state/chassis_system1";
 
+
             //multihost has  dbusobjects chassis_system1 and above          
             if ((std::find(chassisList.begin(), chassisList.end(),
-                           multihostChassisobject)) == chassisList.end())
+                           multihostChassisobject)) != chassisList.end())
             {
                 //in case of baseboard dbus object then select any one of host dbus object as all the host dbus objects have chassis_system0 interface which does sled cycle. 
                 if( collection_util::isBaseboardChassisId(chassisId) == true )
-                {  
+                {
+                    std::cerr<<"doChassisPowerCycle : is baseboard and multihost\n";
                     chassisIndex = "1";
+                    slotIndex = "0";
                 }
                 else
                 {
+                    std::cerr<<"doChassisPowerCycle : is not baseboard and multihost\n";
                     chassisIndex = collection_util::getChassisSystemIndex(chassisId);
+                    slotIndex = chassisIndex;
                 }
             }
             else
             {
+                std::cerr<<"doChassisPowerCycle : is singlehost\n";
                 chassisIndex = "0";
+                slotIndex = "0";
             }
-            const char* processName = ("xyz.openbmc_project.State.Chassis" + chassisIndex).c_str();
+            std::cerr<<"doChassisPowerCycle : chassis index is : "<<chassisIndex<<"\n";
+
+            //const char* processName = ("xyz.openbmc_project.State.Chassis" + chassisIndex ).c_str();
+            std::string processNameStr = "xyz.openbmc_project.State.Chassis" + chassisIndex ;
             const char* interfaceName = "xyz.openbmc_project.State.Chassis";
             const char* destProperty = "RequestedPowerTransition";
             const std::string propertyValue =
                 "xyz.openbmc_project.State.Chassis.Transition.PowerCycle";
             std::string objectPath =
-                "/xyz/openbmc_project/state/chassis_system0";
+                ("/xyz/openbmc_project/state/chassis_system" + slotIndex ).c_str();
 
             /* Look for system reset chassis path */
             if ((std::find(chassisList.begin(), chassisList.end(),
@@ -598,22 +609,25 @@ inline void
                  * exist on some platforms, fall back to a host-only power reset
                  */
                 objectPath = "/xyz/openbmc_project/state/chassis0";
-            }
 
+            }
+            std::cerr<<"doChassisPowerCycle :  objectPath : "<<objectPath<<"\n";
+            std::cerr<<"doChassisPowerCycle :  processNameStr : "<<processNameStr<<"\n";
             crow::connections::systemBus->async_method_call(
                 [asyncResp](const boost::system::error_code ec) {
                     // Use "Set" method to set the property value.
                     if (ec)
                     {
+                        std::cerr<<"doChassisPowerCycle : [Set] Bad D-Bus request error:n";
                         BMCWEB_LOG_DEBUG << "[Set] Bad D-Bus request error: "
                                          << ec;
                         messages::internalError(asyncResp->res);
                         return;
                     }
-
+                    std::cerr<<"doChassisPowerCycle : set property success\n";
                     messages::success(asyncResp->res);
                 },
-                processName, objectPath, "org.freedesktop.DBus.Properties",
+                processNameStr.c_str(), objectPath, "org.freedesktop.DBus.Properties",
                 "Set", interfaceName, destProperty,
                 std::variant<std::string>{propertyValue});
         },
@@ -642,11 +656,14 @@ inline void requestRoutesChassisResetAction(App& app)
                 if (!json_util::readJson(req, asyncResp->res, "ResetType",
                                          resetType))
                 {
+                    std::cerr<<"resettype not found\n";
                     return;
                 }
 
                 if (resetType != "PowerCycle")
                 {
+                    std::cerr<<"PowerCycle not valid\n";
+
                     BMCWEB_LOG_DEBUG << "Invalid property value for ResetType: "
                                      << resetType;
                     messages::actionParameterNotSupported(

@@ -71,8 +71,16 @@ inline std::string
 }
 inline std::string
     getChassisSystemIndex(std::string redfishSubTree){
+    std::string chassisIndex ="1";
+
     redfishSubTree.erase(remove( redfishSubTree.begin(), redfishSubTree.end(), '\"' ),redfishSubTree.end());
-    return redfishSubTree.substr( redfishSubTree.find("Twin_Lake_") + (redfishSubTree.length() - 1) );
+    
+    if( redfishSubTree.find("Twin_Lake_") != std::string::npos )
+    {
+        chassisIndex = redfishSubTree.substr( redfishSubTree.find("Twin_Lake_") + (redfishSubTree.length() - 1) );
+    }
+
+    return chassisIndex;
     }
 inline bool 
     isBaseboardChassisId(std::string chassisId){
@@ -87,5 +95,19 @@ inline bool
         }
 
     }
+inline bool 
+    isMultiHost(std::string chassisId){
+        
+        if( chassisId.find("Twin_Lake_") != std::string::npos )
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+
 } // namespace collection_util
 } // namespace redfish
