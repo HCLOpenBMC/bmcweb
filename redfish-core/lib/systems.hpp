@@ -642,6 +642,8 @@ inline void getHostState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
             BMCWEB_LOG_DEBUG << "Host state: " << *s;
             if (s != nullptr)
             {
+                std::cerr<<"getHostState() : hoststate : "<<*s<<"\n";
+
                 // Verify Host State
                 if (*s == "xyz.openbmc_project.State.Host.HostState.Running")
                 {
@@ -678,8 +680,13 @@ inline void getHostState(const std::shared_ptr<bmcweb::AsyncResp>& aResp)
                     aResp->res.jsonValue["Status"]["State"] = "Disabled";
                 }
             }
+            else{
+
+                std::cerr<<"getHostState() : hoststate is null\n";
+
+            }
         },
-        hostDbusServiceName.c_str(), ("/xyz/openbmc_project/control/host" + computerSystemIndex).c_str(),
+        hostDbusServiceName.c_str(), ("/xyz/openbmc_project/state/host" + computerSystemIndex).c_str(),
         "org.freedesktop.DBus.Properties", "Get",
         "xyz.openbmc_project.State.Host", "CurrentHostState");
 }
