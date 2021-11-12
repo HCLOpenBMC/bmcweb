@@ -78,5 +78,15 @@ inline void
         interfaces);
 }
 
+inline std::string getComputerSystemIndex(std::string redfishSubTree)
+{
+    redfishSubTree.erase(
+        remove(redfishSubTree.begin(), redfishSubTree.end(), '\"'),
+        redfishSubTree.end());
+
+    return redfishSubTree.substr(redfishSubTree.find("host") +
+                                 (redfishSubTree.length() - 1));
+}
+
 } // namespace collection_util
 } // namespace redfish
