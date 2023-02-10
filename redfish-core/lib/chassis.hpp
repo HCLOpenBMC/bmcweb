@@ -308,45 +308,47 @@ inline void
 
             const std::string assetTagInterface =
                 "xyz.openbmc_project.Inventory.Decorator.AssetTag";
-            if (std::find(interfaces2.begin(), interfaces2.end(),
-                          assetTagInterface) != interfaces2.end())
-            {
-                sdbusplus::asio::getProperty<std::string>(
-                    *crow::connections::systemBus, connectionName, path,
-                    assetTagInterface, "AssetTag",
-                    [asyncResp, chassisId(std::string(chassisId))](
-                        const boost::system::error_code ec2,
-                        const std::string& property) {
-                    if (ec2)
-                    {
-                        BMCWEB_LOG_DEBUG << "DBus response error for AssetTag";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["AssetTag"] = property;
-                    });
-            }
- 
             const std::string replaceableInterface =
                 "xyz.openbmc_project.Inventory.Decorator.Replaceable";
-            if (std::find(interfaces2.begin(), interfaces2.end(),
-                          replaceableInterface) != interfaces2.end())
-            {
-                sdbusplus::asio::getProperty<bool>(
-                    *crow::connections::systemBus, connectionName, path,
-                    replaceableInterface, "FieldReplaceable",
-                    [asyncResp, chassisId(std::string(chassisId))](
-                        const boost::system::error_code ec2,
-                        const bool property) {
-                    if (ec2)
+
+	    for (const auto& interface : interfaces2)
+	    {
+		    if (interface == assetTagInterface)
+		    {
+                        sdbusplus::asio::getProperty<std::string>(
+                            *crow::connections::systemBus, connectionName, path,
+                             assetTagInterface, "AssetTag",
+                             [asyncResp, chassisId(std::string(chassisId))](
+                                 const boost::system::error_code ec2,
+                                 const std::string& property) {
+			     if (ec2)
+			     {
+			     BMCWEB_LOG_DEBUG << "DBus response error for AssetTag";
+			     messages::internalError(asyncResp->res);
+			     return;
+			     }
+			     asyncResp->res.jsonValue["AssetTag"] = property;
+			     });
+		    }
+		    else if(interface == replaceableInterface)
                     {
-                        BMCWEB_LOG_DEBUG << "DBus response error for FieldReplaceable";
-                        messages::internalError(asyncResp->res);
-                        return;
-                    }
-                    asyncResp->res.jsonValue["FieldReplaceable"] = property;
-                    });
-            }
+                        sdbusplus::asio::getProperty<bool>(
+                            *crow::connections::systemBus, connectionName, path,
+			    replaceableInterface, "FieldReplaceable",
+			    [asyncResp, chassisId(std::string(chassisId))](
+				    const boost::system::error_code ec2,
+				    const bool property) {
+			    if (ec2)
+			    {
+			    BMCWEB_LOG_DEBUG << "DBus response error for FieldReplaceable";
+			    messages::internalError(asyncResp->res);
+			    return;
+			    }
+			    asyncResp->res.jsonValue["Replaceable"] = property;
+			    });
+	            }
+	    }
+
             for (const char* interface : hasIndicatorLed)
             {
                 if (std::find(interfaces2.begin(), interfaces2.end(),
